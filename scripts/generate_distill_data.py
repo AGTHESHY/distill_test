@@ -63,22 +63,22 @@ def build_prompt(tokenizer, instruction: str, user_input: str) -> str:
     )
 
 
-def load_teacher(quantize_8bit: bool):
-    """加载教师模型。7B 模型在 16GB 显存上建议用 --quantize-8bit。"""
+def load_teacher(use_fp16: bool):
+    """加载教师模型。默认 8-bit 量化；传 --fp16 时用全精度 fp16。"""
     tokenizer = AutoTokenizer.from_pretrained(str(TEACHER_DIR), trust_remote_code=True)
 
     model_kwargs: dict = {
         "device_map": "auto",  # 自动分配 GPU/CPU
         "trust_remote_code": True,
     }
-    if quantize_8bit:
-        # 8-bit 量化：显存约 7GB，需 pip install bitsandbytes
+    if use_fp16:
+        # fp16 全精度：显存约 14GB，16GB 卡可能部分层 offload 到 CPU
+        model_kwargs["dtype"] = torch.float16
+    else:
+        # 8-bit 量化（默认）：显存约 7GB，需 pip install bitsandbytes
         from transformers import BitsAndBytesConfig
 
         model_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
-    else:
-        # fp16 全精度：显存约 14GB，16GB 卡可能部分层 offload 到 CPU
-        model_kwargs["dtype"] = torch.float16
 
     model = AutoModelForCausalLM.from_pretrained(str(TEACHER_DIR), **model_kwargs)
     model.eval()
@@ -113,9 +113,9 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true", help="跳过已生成的条目")
     parser.add_argument("--max-new-tokens", type=int, default=512)
     parser.add_argument(
-        "--quantize-8bit",
+        "--fp16",
         action="store_true",
-        help="8-bit 量化加载教师模型（需 pip install bitsandbytes，显存更省）",
+        help="用 fp16 全精度加载教师模型（默认 8-bit 量化，更省显存）",
     )
     args = parser.parse_args()
 
@@ -133,8 +133,8 @@ def main() -> None:
         print("已全部完成，无需重复生成。")
         return
 
-    print("加载教师模型...")
-    tokenizer, model = load_teacher(args.quantize_8bit)
+    print("加载教师模型（8-bit）..." if not args.fp16 else "加载教师模型（fp16）...")
+    tokenizer, model = load_teacher(args.fp16)
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     mode = "a" if args.resume and OUTPUT_FILE.exists() else "w"

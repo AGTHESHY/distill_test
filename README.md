@@ -102,13 +102,14 @@ hf download Qwen/Qwen2.5-7B-Instruct --local-dir ./models/teacher
 
 ```powershell
 # 先试 50 条（约 15～20 分钟）
+# 默认 8-bit 量化；需 pip install bitsandbytes
 python scripts/generate_distill_data.py --limit 50
 
 # 满意后跑全部，中断可加 --resume 续跑
 python scripts/generate_distill_data.py --resume
 
-# 显存紧张时（需 pip install bitsandbytes）
-python scripts/generate_distill_data.py --quantize-8bit --limit 50
+# 可选：fp16 全精度（显存约 14GB）
+python scripts/generate_distill_data.py --fp16 --limit 50
 ```
 
 数据格式示例：
@@ -152,7 +153,7 @@ python scripts/generate_distill_data.py --quantize-8bit --limit 50
 
 **Q: 教师生成很慢？**
 
-7B fp16 在 16GB 显存上可能部分层 offload 到 CPU。安装 `bitsandbytes` 后使用 `--quantize-8bit` 可显著加速。全部 1000 条约需数小时，建议先用 `--limit 50` 验证效果。
+7B 默认以 8-bit 加载（约 7GB 显存，需 `pip install bitsandbytes`）。若要用 fp16 全精度，加 `--fp16`。全部 1000 条约需数小时，建议先用 `--limit 50` 验证效果。
 
 **Q: 下载中断了怎么办？**
 
