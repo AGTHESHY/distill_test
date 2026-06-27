@@ -45,14 +45,18 @@ def download_model(repo_id: str, local_dir: Path) -> None:
 
 
 def download_data() -> None:
+    import json
+
     from datasets import load_dataset
 
     out = DATA / "raw_questions.jsonl"
     DATA.mkdir(parents=True, exist_ok=True)
     print(f"下载数据集 {DATASET_REPO} ({DATASET_SPLIT})")
     ds = load_dataset(DATASET_REPO, split=DATASET_SPLIT)
-    ds.to_json(str(out))
-    print(f"完成: {out} ({len(ds)} 条)")
+    with open(out, "w", encoding="utf-8") as f:
+        for row in ds:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    print(f"完成: {out} ({len(ds)} 条, UTF-8 中文明文)")
 
 
 def main() -> None:
