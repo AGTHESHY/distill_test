@@ -38,7 +38,7 @@ flowchart LR
 | 0. 环境配置 | `scripts/verify_env.py` | — | 确认 CUDA 可用 |
 | 1. 下载资源 | `scripts/download.py` | Hugging Face | `models/`、`data/raw_questions.jsonl` |
 | 2. 生成蒸馏数据 | `scripts/generate_distill_data.py` | 问题集 + 教师模型 | `data/distill_train.jsonl` |
-| 3. 训练学生模型 | `scripts/train_student.py`（待实现） | 蒸馏数据 + 学生模型 | `models/student-distilled/` |
+| 3. 训练学生模型 | `scripts/train_student.py` | 蒸馏数据 + 学生模型 | `models/student-distilled/` |
 
 ## 项目结构
 
@@ -53,6 +53,7 @@ test-drill/
 ├── scripts/
 │   ├── download.py              # 下载模型与数据
 │   ├── generate_distill_data.py # 教师生成蒸馏数据
+│   ├── train_student.py         # 学生 SFT 训练
 │   └── verify_env.py            # 环境验证
 ├── environment.yml              # conda 依赖（不含 PyTorch）
 └── requirements-torch.txt       # PyTorch cu128（RTX 50 系列必需）
@@ -122,9 +123,27 @@ python scripts/generate_distill_data.py --resume --batch-size 8
 
 其中 `output` 是**教师模型生成**的回答，将用于训练学生模型。
 
-### 3. 训练学生模型（下一步）
+### 3. 训练学生模型
 
-使用 `distill_train.jsonl` 对学生模型做 SFT（监督微调），让学生学会模仿教师的回答风格与质量。训练脚本 `scripts/train_student.py` 待实现。
+使用 `distill_train.jsonl` 对学生模型做 SFT，让学生模仿教师的回答。
+
+```powershell
+# 默认 LoRA 微调（推荐，省显存）
+python scripts/train_student.py
+
+# 训练 3 轮，并合并 LoRA 为完整模型
+python scripts/train_student.py --epochs 3 --merge-lora
+
+# 全量微调（0.5B 约需 4～6GB 显存）
+python scripts/train_student.py --no-lora
+```
+
+输出目录：
+
+| 路径 | 内容 |
+|------|------|
+| `models/student-distilled/` | LoRA 适配器 + tokenizer |
+| `models/student-distilled-merged/` | 加 `--merge-lora` 后的完整模型 |
 
 ## 模型与数据说明
 
