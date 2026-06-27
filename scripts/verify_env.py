@@ -1,4 +1,8 @@
-"""验证 distill 环境是否配置正确。"""
+"""验证 distill conda 环境是否配置正确。
+
+检查项：Python 版本、PyTorch CUDA、GPU 型号、核心 ML 依赖包。
+RTX 50 系列（Blackwell）需 PyTorch cu128 构建，否则 CUDA 不可用。
+"""
 
 import sys
 
@@ -16,6 +20,7 @@ def main() -> int:
             print(f"GPU: {torch.cuda.get_device_name(0)}")
             cap = torch.cuda.get_device_capability(0)
             print(f"Compute capability: sm_{cap[0]}{cap[1]}")
+            # 实际在 GPU 上创建张量，确认不仅是"检测到"而是能真正运算
             x = torch.randn(2, 2, device="cuda")
             print(f"CUDA tensor test: OK ({x.device})")
         else:
@@ -23,6 +28,7 @@ def main() -> int:
     except Exception as e:
         errors.append(f"PyTorch 检查失败: {e}")
 
+    # 蒸馏流程依赖的核心包
     packages = [
         "transformers",
         "datasets",

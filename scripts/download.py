@@ -21,13 +21,16 @@ ROOT = Path(__file__).resolve().parent.parent
 MODELS = ROOT / "models"
 DATA = ROOT / "data"
 
+# 教师大、学生小，同属 Qwen2.5 系列，tokenizer 兼容
 STUDENT_REPO = "Qwen/Qwen2.5-0.5B-Instruct"
 TEACHER_REPO = "Qwen/Qwen2.5-7B-Instruct"
+# 中文指令数据集，只取前 1000 条作为蒸馏问题来源
 DATASET_REPO = "BelleGroup/train_1M_CN"
 DATASET_SPLIT = "train[:1000]"
 
 
 def download_model(repo_id: str, local_dir: Path) -> None:
+    """从 Hugging Face 下载模型到本地，支持断点续传。"""
     print(f"下载模型 {repo_id} -> {local_dir}")
     if local_dir.exists() and any(local_dir.iterdir()):
         print("检测到未完成下载，将自动断点续传（勿删除 models/ 目录）")
@@ -45,6 +48,7 @@ def download_model(repo_id: str, local_dir: Path) -> None:
 
 
 def download_data() -> None:
+    """下载中文问题集，导出为 UTF-8 中文明文的 JSONL。"""
     import json
 
     from datasets import load_dataset
@@ -53,6 +57,7 @@ def download_data() -> None:
     DATA.mkdir(parents=True, exist_ok=True)
     print(f"下载数据集 {DATASET_REPO} ({DATASET_SPLIT})")
     ds = load_dataset(DATASET_REPO, split=DATASET_SPLIT)
+    # ensure_ascii=False 让文件里直接显示中文，而非 \uXXXX 转义
     with open(out, "w", encoding="utf-8") as f:
         for row in ds:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")

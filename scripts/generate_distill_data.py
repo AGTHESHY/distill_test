@@ -1,5 +1,8 @@
 """用教师模型为问题集生成回答，产出蒸馏训练数据。
 
+蒸馏的数据准备阶段：大模型（教师）对每条问题生成回答，
+小模型（学生）后续将学习模仿这些回答。
+
 用法:
   python scripts/generate_distill_data.py --limit 50    # 先试 50 条
   python scripts/generate_distill_data.py               # 全部 1000 条
@@ -24,6 +27,7 @@ OUTPUT_FILE = ROOT / "data" / "distill_train.jsonl"
 
 
 def load_questions(path: Path, limit: int | None) -> list[dict]:
+    """从 raw_questions.jsonl 读取问题，每行一条 JSON。"""
     rows: list[dict] = []
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -36,6 +40,7 @@ def load_questions(path: Path, limit: int | None) -> list[dict]:
 
 
 def load_done_indices(path: Path) -> set[int]:
+    """读取已生成条目的 index，用于 --resume 断点续跑。"""
     if not path.exists():
         return set()
     done: set[int] = set()
@@ -48,6 +53,7 @@ def load_done_indices(path: Path) -> set[int]:
 
 
 def build_prompt(tokenizer, instruction: str, user_input: str) -> str:
+    """把 instruction 格式化为 Qwen 聊天模板，供教师模型生成。"""
     user_content = instruction.strip()
     if user_input.strip():
         user_content = f"{user_content}\n{user_input.strip()}"
@@ -58,13 +64,15 @@ def build_prompt(tokenizer, instruction: str, user_input: str) -> str:
 
 
 def load_teacher(quantize_4bit: bool):
+    """加载教师模型。7B 模型在 16GB 显存上建议用 --quantize-4bit。"""
     tokenizer = AutoTokenizer.from_pretrained(str(TEACHER_DIR), trust_remote_code=True)
 
     model_kwargs: dict = {
-        "device_map": "auto",
+        "device_map": "auto",  # 自动分配 GPU/CPU
         "trust_remote_code": True,
     }
     if quantize_4bit:
+        # 4-bit 量化：显存约 5GB，需 pip install bitsandbytes
         from transformers import BitsAndBytesConfig
 
         model_kwargs["quantization_config"] = BitsAndBytesConfig(
@@ -72,6 +80,7 @@ def load_teacher(quantize_4bit: bool):
             bnb_4bit_compute_dtype=torch.float16,
         )
     else:
+        # fp16 全精度：显存约 14GB，16GB 卡可能部分层 offload 到 CPU
         model_kwargs["dtype"] = torch.float16
 
     model = AutoModelForCausalLM.from_pretrained(str(TEACHER_DIR), **model_kwargs)
@@ -87,14 +96,16 @@ def generate_answer(
     user_input: str,
     max_new_tokens: int,
 ) -> str:
+    """调用教师模型生成单条回答，只解码新生成的 token。"""
     prompt = build_prompt(tokenizer, instruction, user_input)
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     output_ids = model.generate(
         **inputs,
         max_new_tokens=max_new_tokens,
-        do_sample=False,
+        do_sample=False,  # 贪心解码，结果稳定可复现
         pad_token_id=tokenizer.eos_token_id,
     )
+    # 去掉输入部分，只保留模型新生成的 token
     new_tokens = output_ids[0, inputs["input_ids"].shape[1] :]
     return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
 
@@ -138,6 +149,7 @@ def main() -> None:
             answer = generate_answer(
                 model, tokenizer, instruction, user_input, args.max_new_tokens
             )
+            # 保存教师回答，替换原始数据集中的 output
             record = {
                 "index": idx,
                 "instruction": instruction,
@@ -145,7 +157,7 @@ def main() -> None:
                 "output": answer,
             }
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
-            f.flush()
+            f.flush()  # 每条立即落盘，中断不丢数据
             print(f"[{n}/{len(pending)}] 完成第 {idx + 1} 条")
 
     print(f"已写入: {OUTPUT_FILE}")
