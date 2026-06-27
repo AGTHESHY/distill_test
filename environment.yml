@@ -6,12 +6,7 @@ dependencies:
   - python=3.11
   - pip
   - pip:
-      # PyTorch cu128 — RTX 5080 (Blackwell sm_120) 需要 CUDA 12.8 构建
-      - --extra-index-url https://download.pytorch.org/whl/cu128
-      - torch>=2.7.0
-      - torchvision
-      - torchaudio
-      # Hugging Face 生态
+      # PyTorch 需单独安装（见 scripts/setup.ps1），此处仅列 ML 依赖
       - transformers>=4.46.0
       - datasets>=3.0.0
       - accelerate>=1.0.0
@@ -20,7 +15,6 @@ dependencies:
       - huggingface_hub>=0.26.0
       - safetensors
       - tokenizers
-      # 工具
       - sentencepiece
       - protobuf
       - scipy

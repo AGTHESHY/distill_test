@@ -1,0 +1,4 @@
+# PyTorch cu128 — RTX 5080 (Blackwell sm_120) 必须用 CUDA 12.8 构建
+# 安装: pip install -r requirements-torch.txt --index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
