@@ -72,7 +72,7 @@ def load_teacher(quantize_4bit: bool):
             bnb_4bit_compute_dtype=torch.float16,
         )
     else:
-        model_kwargs["torch_dtype"] = torch.float16
+        model_kwargs["dtype"] = torch.float16
 
     model = AutoModelForCausalLM.from_pretrained(str(TEACHER_DIR), **model_kwargs)
     model.eval()
