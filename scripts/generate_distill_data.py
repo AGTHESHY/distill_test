@@ -177,7 +177,8 @@ def generate_batch_answers(
 
 
 def chunked(indices: list[int], batch_size: int):
-    """把 index 列表按 batch_size 切成多段，例如 [0,1,2,3,4], size=2 -> [0,1], [2,3], [4]。"""
+    """把 index 列表按 batch_size 切成多段，例如 [0
+    ,1,2,3,4], size=2 -> [0,1], [2,3], [4]。"""
     for start in range(0, len(indices), batch_size):
         yield indices[start : start + batch_size]
 
