@@ -63,22 +63,19 @@ def build_prompt(tokenizer, instruction: str, user_input: str) -> str:
     )
 
 
-def load_teacher(quantize_4bit: bool):
-    """加载教师模型。7B 模型在 16GB 显存上建议用 --quantize-4bit。"""
+def load_teacher(quantize_8bit: bool):
+    """加载教师模型。7B 模型在 16GB 显存上建议用 --quantize-8bit。"""
     tokenizer = AutoTokenizer.from_pretrained(str(TEACHER_DIR), trust_remote_code=True)
 
     model_kwargs: dict = {
         "device_map": "auto",  # 自动分配 GPU/CPU
         "trust_remote_code": True,
     }
-    if quantize_4bit:
-        # 4-bit 量化：显存约 5GB，需 pip install bitsandbytes
+    if quantize_8bit:
+        # 8-bit 量化：显存约 7GB，需 pip install bitsandbytes
         from transformers import BitsAndBytesConfig
 
-        model_kwargs["quantization_config"] = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-        )
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
     else:
         # fp16 全精度：显存约 14GB，16GB 卡可能部分层 offload 到 CPU
         model_kwargs["dtype"] = torch.float16
@@ -116,9 +113,9 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true", help="跳过已生成的条目")
     parser.add_argument("--max-new-tokens", type=int, default=512)
     parser.add_argument(
-        "--quantize-4bit",
+        "--quantize-8bit",
         action="store_true",
-        help="4-bit 量化加载教师模型（需 pip install bitsandbytes，显存更省）",
+        help="8-bit 量化加载教师模型（需 pip install bitsandbytes，显存更省）",
     )
     args = parser.parse_args()
 
@@ -137,7 +134,7 @@ def main() -> None:
         return
 
     print("加载教师模型...")
-    tokenizer, model = load_teacher(args.quantize_4bit)
+    tokenizer, model = load_teacher(args.quantize_8bit)
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     mode = "a" if args.resume and OUTPUT_FILE.exists() else "w"

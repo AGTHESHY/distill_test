@@ -108,7 +108,7 @@ python scripts/generate_distill_data.py --limit 50
 python scripts/generate_distill_data.py --resume
 
 # 显存紧张时（需 pip install bitsandbytes）
-python scripts/generate_distill_data.py --quantize-4bit --limit 50
+python scripts/generate_distill_data.py --quantize-8bit --limit 50
 ```
 
 数据格式示例：
@@ -132,7 +132,7 @@ python scripts/generate_distill_data.py --quantize-4bit --limit 50
 
 | 角色 | 模型 | 参数量 | 显存占用（推理） |
 |------|------|--------|------------------|
-| 教师 | `Qwen/Qwen2.5-7B-Instruct` | 7B | ~14GB（fp16）/ ~5GB（4-bit） |
+| 教师 | `Qwen/Qwen2.5-7B-Instruct` | 7B | ~14GB（fp16）/ ~7GB（8-bit） |
 | 学生 | `Qwen/Qwen2.5-0.5B-Instruct` | 0.5B | ~1GB |
 
 | 数据 | 来源 | 说明 |
@@ -152,7 +152,7 @@ python scripts/generate_distill_data.py --quantize-4bit --limit 50
 
 **Q: 教师生成很慢？**
 
-7B fp16 在 16GB 显存上可能部分层 offload 到 CPU。安装 `bitsandbytes` 后使用 `--quantize-4bit` 可显著加速。全部 1000 条约需数小时，建议先用 `--limit 50` 验证效果。
+7B fp16 在 16GB 显存上可能部分层 offload 到 CPU。安装 `bitsandbytes` 后使用 `--quantize-8bit` 可显著加速。全部 1000 条约需数小时，建议先用 `--limit 50` 验证效果。
 
 **Q: 下载中断了怎么办？**
 
