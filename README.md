@@ -102,14 +102,11 @@ hf download Qwen/Qwen2.5-7B-Instruct --local-dir ./models/teacher
 
 ```powershell
 # 先试 50 条（约 15～20 分钟）
-# 默认 8-bit 量化；需 pip install bitsandbytes
-python scripts/generate_distill_data.py --limit 50
+# 默认批处理；中断后用 --resume 续跑
+python scripts/generate_distill_data.py --batch-size 8
 
-# 满意后跑全部，中断可加 --resume 续跑
-python scripts/generate_distill_data.py --resume
-
-# 可选：fp16 全精度（显存约 14GB）
-python scripts/generate_distill_data.py --fp16 --limit 50
+# 满意后跑全部
+python scripts/generate_distill_data.py --resume --batch-size 8
 ```
 
 数据格式示例：
